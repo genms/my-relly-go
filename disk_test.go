@@ -47,10 +47,10 @@ func TestDisk(t *testing.T) {
 	buf := make([]byte, PAGE_SIZE)
 	disk2.ReadPageData(helloPageId, buf)
 	if !bytes.Equal(hello, buf) {
-		t.Error("bytes.Equal(hello, buf)")
+		t.Fatal("bytes.Equal(hello, buf)")
 	}
 	disk2.ReadPageData(worldPageId, buf)
 	if !bytes.Equal(world, buf) {
-		t.Error("bytes.Equal(world, buf)")
+		t.Fatal("bytes.Equal(world, buf)")
 	}
 }
