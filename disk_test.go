@@ -14,7 +14,12 @@ func TestDisk(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	defer os.Remove(file.Name())
+	defer func() {
+		derr := os.Remove(file.Name())
+		if derr != nil {
+			panic(derr)
+		}
+	}()
 
 	disk, err := NewDiskManager(file)
 	if err != nil {

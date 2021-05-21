@@ -97,11 +97,17 @@ func (m *BufferPoolManager) FetchPage(pageId PageId) (*Buffer, error) {
 
 	buffer := &frame.buffer
 	if buffer.IsDirty {
-		m.disk.WritePageData(evictPageId, buffer.Page[:])
+		err = m.disk.WritePageData(evictPageId, buffer.Page[:])
+		if err != nil {
+			return nil, err
+		}
 	}
 	buffer.PageId = pageId
 	buffer.IsDirty = false
-	m.disk.ReadPageData(pageId, buffer.Page[:])
+	err = m.disk.ReadPageData(pageId, buffer.Page[:])
+	if err != nil {
+		return nil, err
+	}
 	frame.usageCount = 1
 	frame.refCount = 1
 
@@ -120,7 +126,10 @@ func (m *BufferPoolManager) CreatePage() (*Buffer, error) {
 
 	buffer := &frame.buffer
 	if buffer.IsDirty {
-		m.disk.WritePageData(evictPageId, buffer.Page[:])
+		err = m.disk.WritePageData(evictPageId, buffer.Page[:])
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	pageId := m.disk.AllocatePage()
@@ -150,7 +159,10 @@ func (m *BufferPoolManager) Flush() error {
 	for pageId, bufferId := range m.pageTable {
 		frame := &m.pool.buffers[bufferId]
 		page := &frame.buffer.Page
-		m.disk.WritePageData(pageId, page[:])
+		err := m.disk.WritePageData(pageId, page[:])
+		if err != nil {
+			return err
+		}
 		frame.buffer.IsDirty = false
 	}
 	m.disk.Sync()

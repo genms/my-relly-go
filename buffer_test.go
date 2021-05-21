@@ -21,8 +21,17 @@ func TestBuffer(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	defer os.Remove(file.Name())
-	defer file.Close()
+	defer func() {
+		var derr error
+		derr = file.Close()
+		if derr != nil {
+			panic(derr)
+		}
+		derr = os.Remove(file.Name())
+		if derr != nil {
+			panic(derr)
+		}
+	}()
 
 	disk, err := NewDiskManager(file)
 	if err != nil {
