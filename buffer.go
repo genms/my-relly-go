@@ -1,10 +1,12 @@
 package main
 
-import "errors"
+import (
+	"golang.org/x/xerrors"
+)
 
 var (
-	ErrIo           = errors.New("I/O error")
-	ErrNoFreeBuffer = errors.New("no free buffer available in buffer pool")
+	ErrIo           = xerrors.New("I/O error")
+	ErrNoFreeBuffer = xerrors.New("no free buffer available in buffer pool")
 )
 
 type BufferId int

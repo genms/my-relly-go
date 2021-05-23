@@ -1,9 +1,10 @@
 package main
 
 import (
-	"errors"
 	"math"
 	"os"
+
+	"golang.org/x/xerrors"
 )
 
 type PageId uint64
@@ -13,7 +14,7 @@ const PAGE_SIZE = 4096
 
 func (p *PageId) Valid() (PageId, error) {
 	if *p == INVALID_PAGE_ID {
-		return INVALID_PAGE_ID, errors.New("Valid")
+		return INVALID_PAGE_ID, xerrors.New("Valid")
 	} else {
 		return *p, nil
 	}
