@@ -1,49 +1,53 @@
-package main
+package buffer
 
 import (
 	"bytes"
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"my-relly-go/disk"
 )
 
 func TestBuffer(t *testing.T) {
-	var err error
-
 	// 書き込むデータを準備
-	hello := make([]byte, PAGE_SIZE)
+	hello := make([]byte, disk.PAGE_SIZE)
 	copy(hello, []byte("hello"))
-	world := make([]byte, PAGE_SIZE)
+	world := make([]byte, disk.PAGE_SIZE)
 	copy(world, []byte("world"))
 
-	// ディスクマネージャ初期化
-	file, err := ioutil.TempFile("", "TestBuffer")
-	if err != nil {
-		panic(err)
+	// ディスクマネージャ作成用
+	createDiskManager := func() (*os.File, *disk.DiskManager) {
+		file, err := ioutil.TempFile("", "TestBuffer")
+		if err != nil {
+			panic(err)
+		}
+		diskManager, err := disk.NewDiskManager(file)
+		if err != nil {
+			panic(err)
+		}
+		return file, diskManager
 	}
-	defer func() {
-		var derr error
-		derr = file.Close()
-		if derr != nil {
-			panic(derr)
-		}
-		derr = os.Remove(file.Name())
-		if derr != nil {
-			panic(derr)
-		}
-	}()
 
-	disk, err := NewDiskManager(file)
-	if err != nil {
-		panic(err)
+	// ディスクマネージャ破棄用
+	destroyDiskManager := func(file *os.File, _ *disk.DiskManager) {
+		if err := file.Close(); err != nil {
+			panic(err)
+		}
+		if err := os.Remove(file.Name()); err != nil {
+			panic(err)
+		}
 	}
 
 	t.Run("正常系", func(t *testing.T) {
+		tempFile, diskManager := createDiskManager()
+		defer destroyDiskManager(tempFile, diskManager)
+
 		// バッファプール初期化 サイズ=1
 		pool := NewBufferPool(1)
-		bufmgr := NewBufferPoolManager(disk, pool)
+		bufmgr := NewBufferPoolManager(diskManager, pool)
 
-		var page1Id PageId
+		var page1Id disk.PageId
 		{
 			// ページ1を作成し、バッファ貸し出し
 			buffer, err := bufmgr.CreatePage()
@@ -67,7 +71,7 @@ func TestBuffer(t *testing.T) {
 			}
 			bufmgr.FinishUsingPage(buffer)
 		}
-		var page2Id PageId
+		var page2Id disk.PageId
 		{
 			// ページ2を作成し、バッファ貸し出し
 			// ここでページ1はフラッシュされ、バッファからも捨てられる
@@ -110,9 +114,12 @@ func TestBuffer(t *testing.T) {
 	t.Run("CreatePage_バッファが足りない", func(t *testing.T) {
 		var err error
 
+		tempFile, diskManager := createDiskManager()
+		defer destroyDiskManager(tempFile, diskManager)
+
 		// バッファサイズ=1
 		pool := NewBufferPool(1)
-		bufmgr := NewBufferPoolManager(disk, pool)
+		bufmgr := NewBufferPoolManager(diskManager, pool)
 
 		_, err = bufmgr.CreatePage()
 		if err != nil {
@@ -127,11 +134,14 @@ func TestBuffer(t *testing.T) {
 	})
 
 	t.Run("FetchPage_バッファが足りない", func(t *testing.T) {
+		tempFile, diskManager := createDiskManager()
+		defer destroyDiskManager(tempFile, diskManager)
+
 		// バッファサイズ=1
 		pool := NewBufferPool(1)
-		bufmgr := NewBufferPoolManager(disk, pool)
+		bufmgr := NewBufferPoolManager(diskManager, pool)
 
-		var page1Id PageId
+		var page1Id disk.PageId
 		{
 			buffer, err := bufmgr.CreatePage()
 			if err != nil {
@@ -142,7 +152,7 @@ func TestBuffer(t *testing.T) {
 			page1Id = buffer.PageId
 			bufmgr.FinishUsingPage(buffer)
 		}
-		var page2Id PageId
+		var page2Id disk.PageId
 		{
 			buffer, err := bufmgr.CreatePage()
 			if err != nil {

@@ -1,6 +1,7 @@
-package main
+package disk
 
 import (
+	"encoding/binary"
 	"math"
 	"os"
 
@@ -9,12 +10,26 @@ import (
 
 type PageId uint64
 
+var (
+	ErrInvalidPageId = xerrors.New("invalid page id")
+)
+
+func BytesToPageId(b []byte) PageId {
+	return PageId(binary.LittleEndian.Uint64(b))
+}
+
+func PageIdToBytes(pageId PageId) []byte {
+	buf := make([]byte, 8)
+	binary.LittleEndian.PutUint64(buf, uint64(pageId))
+	return buf[:]
+}
+
 const INVALID_PAGE_ID = PageId(math.MaxUint64)
 const PAGE_SIZE = 4096
 
 func (p *PageId) Valid() (PageId, error) {
 	if *p == INVALID_PAGE_ID {
-		return INVALID_PAGE_ID, xerrors.New("Valid")
+		return INVALID_PAGE_ID, ErrInvalidPageId
 	} else {
 		return *p, nil
 	}

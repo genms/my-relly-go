@@ -9,8 +9,10 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${fileDirname}"
+            //"program": "${fileDirname}"
+            "program": "${workspaceRoot}/main.go"
         },
+        /*
         {
             "name": "Test",
             "type": "go",
@@ -19,7 +21,8 @@
             "program": "${workspaceRoot}",
             "env": {},
             "args": ["-test.v"],
-            //"showLog": true
+            "showLog": true
         }
+        */
     ]
 }

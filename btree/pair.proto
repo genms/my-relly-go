@@ -1,0 +1,8 @@
+syntax = "proto3";
+package btree;
+option go_package = "./;btree";
+
+message Pair {
+    bytes Key = 1;
+    bytes Value = 2;
+}

@@ -1,6 +1,8 @@
-package main
+package buffer
 
 import (
+	"my-relly-go/disk"
+
 	"golang.org/x/xerrors"
 )
 
@@ -12,10 +14,9 @@ var (
 type BufferId int
 
 type Buffer struct {
-	PageId   PageId
-	Page     [PAGE_SIZE]byte
-	IsDirty  bool
-	Bollowed bool
+	PageId  disk.PageId
+	Page    [disk.PAGE_SIZE]byte
+	IsDirty bool
 }
 
 type Frame struct {
@@ -32,6 +33,9 @@ type BufferPool struct {
 func NewBufferPool(poolSize int) *BufferPool {
 	bufferPool := BufferPool{}
 	bufferPool.buffers = make([]Frame, poolSize)
+	for i := range bufferPool.buffers {
+		bufferPool.buffers[i].buffer.PageId = disk.INVALID_PAGE_ID
+	}
 	return &bufferPool
 }
 
@@ -70,20 +74,22 @@ func (p *BufferPool) incrementId(bufferId BufferId) BufferId {
 }
 
 type BufferPoolManager struct {
-	disk      *DiskManager
-	pool      *BufferPool
-	pageTable map[PageId]BufferId
+	diskManager *disk.DiskManager
+	pool        *BufferPool
+	pageTable   map[disk.PageId]BufferId
 }
 
-func NewBufferPoolManager(disk *DiskManager, pool *BufferPool) *BufferPoolManager {
+func NewBufferPoolManager(diskManager *disk.DiskManager, pool *BufferPool) *BufferPoolManager {
 	return &BufferPoolManager{
-		disk,
+		diskManager,
 		pool,
-		map[PageId]BufferId{},
+		map[disk.PageId]BufferId{},
 	}
 }
 
-func (m *BufferPoolManager) FetchPage(pageId PageId) (*Buffer, error) {
+func (m *BufferPoolManager) FetchPage(pageId disk.PageId) (*Buffer, error) {
+	//log.Println("pageId:", pageId)
+
 	if bufferId, ok := m.pageTable[pageId]; ok {
 		frame := &m.pool.buffers[bufferId]
 		frame.usageCount++
@@ -98,22 +104,24 @@ func (m *BufferPoolManager) FetchPage(pageId PageId) (*Buffer, error) {
 	evictPageId := frame.buffer.PageId
 
 	buffer := &frame.buffer
-	if buffer.IsDirty {
-		err = m.disk.WritePageData(evictPageId, buffer.Page[:])
+	if evictPageId != disk.INVALID_PAGE_ID && buffer.IsDirty {
+		err = m.diskManager.WritePageData(evictPageId, buffer.Page[:])
 		if err != nil {
 			return nil, err
 		}
 	}
 	buffer.PageId = pageId
 	buffer.IsDirty = false
-	err = m.disk.ReadPageData(pageId, buffer.Page[:])
+	err = m.diskManager.ReadPageData(pageId, buffer.Page[:])
 	if err != nil {
 		return nil, err
 	}
 	frame.usageCount = 1
 	frame.refCount = 1
 
-	delete(m.pageTable, evictPageId)
+	if evictPageId != disk.INVALID_PAGE_ID {
+		delete(m.pageTable, evictPageId)
+	}
 	m.pageTable[pageId] = bufferId
 	return buffer, nil
 }
@@ -127,19 +135,21 @@ func (m *BufferPoolManager) CreatePage() (*Buffer, error) {
 	evictPageId := frame.buffer.PageId
 
 	buffer := &frame.buffer
-	if buffer.IsDirty {
-		err = m.disk.WritePageData(evictPageId, buffer.Page[:])
+	if evictPageId != disk.INVALID_PAGE_ID && buffer.IsDirty {
+		err = m.diskManager.WritePageData(evictPageId, buffer.Page[:])
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	pageId := m.disk.AllocatePage()
+	pageId := m.diskManager.AllocatePage()
 	*buffer = Buffer{PageId: pageId, IsDirty: true}
 	frame.usageCount = 1
 	frame.refCount = 1
 
-	delete(m.pageTable, evictPageId)
+	if evictPageId != disk.INVALID_PAGE_ID {
+		delete(m.pageTable, evictPageId)
+	}
 	m.pageTable[pageId] = bufferId
 	return buffer, nil
 }
@@ -161,12 +171,12 @@ func (m *BufferPoolManager) Flush() error {
 	for pageId, bufferId := range m.pageTable {
 		frame := &m.pool.buffers[bufferId]
 		page := &frame.buffer.Page
-		err := m.disk.WritePageData(pageId, page[:])
+		err := m.diskManager.WritePageData(pageId, page[:])
 		if err != nil {
 			return err
 		}
 		frame.buffer.IsDirty = false
 	}
-	m.disk.Sync()
+	m.diskManager.Sync()
 	return nil
 }
