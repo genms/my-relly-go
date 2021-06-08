@@ -56,7 +56,7 @@ func NewDiskManager(heapFile *os.File) (*DiskManager, error) {
 }
 
 func OpenDiskManager(heapFilePath string) (*DiskManager, error) {
-	heapFile, err := os.OpenFile(heapFilePath, os.O_RDWR|os.O_CREATE, 0644)
+	heapFile, err := os.Open(heapFilePath)
 	if err != nil {
 		return nil, err
 	}

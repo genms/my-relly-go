@@ -15,7 +15,7 @@ import (
 
 // BTreeの中身をlogに出力
 func (t *BTree) dump(bufmgr *buffer.BufferPoolManager) {
-	metaBuffer, err := bufmgr.FetchPage(t.metaPageId)
+	metaBuffer, err := bufmgr.FetchPage(t.MetaPageId)
 	if err != nil {
 		panic(err)
 	}

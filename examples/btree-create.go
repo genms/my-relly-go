@@ -12,15 +12,16 @@ func BTreeCreate() {
 	if err != nil {
 		panic(err)
 	}
-	disk, err := disk.NewDiskManager(file)
-	if err != nil {
-		panic(err)
-	}
 	defer func() {
 		if err := file.Close(); err != nil {
 			panic(err)
 		}
 	}()
+
+	disk, err := disk.NewDiskManager(file)
+	if err != nil {
+		panic(err)
+	}
 
 	pool := buffer.NewBufferPool(10)
 	bufmgr := buffer.NewBufferPoolManager(disk, pool)

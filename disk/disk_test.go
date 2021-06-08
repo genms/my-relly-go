@@ -15,8 +15,12 @@ func TestDisk(t *testing.T) {
 		panic(err)
 	}
 	defer func() {
-		derr := os.Remove(file.Name())
-		if derr != nil {
+		/*
+			if derr := file.Close(); err != nil {
+				panic(derr)
+			}
+		*/
+		if derr := os.Remove(file.Name()); derr != nil {
 			panic(derr)
 		}
 	}()
@@ -42,7 +46,10 @@ func TestDisk(t *testing.T) {
 		panic(err)
 	}
 
-	file.Close()
+	err = file.Close()
+	if err != nil {
+		panic(err)
+	}
 
 	disk2, err := OpenDiskManager(file.Name())
 	if err != nil {

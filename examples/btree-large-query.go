@@ -5,24 +5,13 @@ import (
 	"my-relly-go/btree"
 	"my-relly-go/buffer"
 	"my-relly-go/disk"
-	"os"
 )
 
 func BTreeLargeQuery() {
-	file, err := os.Open("large.btr")
+	diskManager, err := disk.OpenDiskManager("large.btr")
 	if err != nil {
 		panic(err)
 	}
-	diskManager, err := disk.NewDiskManager(file)
-	if err != nil {
-		panic(err)
-	}
-	defer func() {
-		if err := file.Close(); err != nil {
-			panic(err)
-		}
-	}()
-
 	pool := buffer.NewBufferPool(10)
 	bufmgr := buffer.NewBufferPoolManager(diskManager, pool)
 

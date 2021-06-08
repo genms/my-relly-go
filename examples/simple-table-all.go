@@ -1,14 +1,14 @@
 package examples
 
 import (
-	"fmt"
 	"my-relly-go/btree"
 	"my-relly-go/buffer"
 	"my-relly-go/disk"
+	"my-relly-go/table"
 )
 
-func BTreeRange() {
-	diskManager, err := disk.OpenDiskManager("test.btr")
+func SimpleTableAll() {
+	diskManager, err := disk.OpenDiskManager("simple.rly")
 	if err != nil {
 		panic(err)
 	}
@@ -16,7 +16,7 @@ func BTreeRange() {
 	bufmgr := buffer.NewBufferPoolManager(diskManager, pool)
 
 	tree := btree.NewBTree(disk.PageId(0))
-	iter, err := tree.Search(bufmgr, &btree.SearchModeKey{Key: []byte("Gifu")})
+	iter, err := tree.Search(bufmgr, &btree.SearchModeStart{})
 	if err != nil {
 		panic(err)
 	}
@@ -29,7 +29,9 @@ func BTreeRange() {
 			}
 			panic(err)
 		}
-		//fmt.Printf("%02x = %02x\n", key, value)
-		fmt.Printf("%s = %s\n", string(key), string(value))
+		record := make([][]byte, 0)
+		record = table.DecodeTuple(key, record)
+		record = table.DecodeTuple(value, record)
+		printRecord(record)
 	}
 }

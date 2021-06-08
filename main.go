@@ -11,4 +11,10 @@ func main() {
 	//examples.BTreeLargeQuery()
 	//examples.BTreeQuery()
 	//examples.BTreeRange()
+	//examples.SimpleTableAll()
+	//examples.SimpleTableCreate()
+	//examples.SimpleTableExact()
+	//examples.SimpleTablePlan()
+	//examples.SimpleTableRange()
+	//examples.SimpleTableScan()
 }

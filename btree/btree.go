@@ -59,7 +59,7 @@ func (s *SearchModeKey) tupleSlotId(leaf *Leaf) (int, int) {
 }
 
 type BTree struct {
-	metaPageId disk.PageId
+	MetaPageId disk.PageId
 }
 
 func CreateBTree(bufmgr *buffer.BufferPoolManager) (*BTree, error) {
@@ -90,7 +90,7 @@ func NewBTree(metaPageId disk.PageId) *BTree {
 }
 
 func (t *BTree) fetchRootPage(bufmgr *buffer.BufferPoolManager) (*buffer.Buffer, error) {
-	metaBuffer, err := bufmgr.FetchPage(t.metaPageId)
+	metaBuffer, err := bufmgr.FetchPage(t.MetaPageId)
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +233,7 @@ func (t *BTree) insertInternal(bufmgr *buffer.BufferPoolManager, buffer *buffer.
 }
 
 func (t *BTree) Insert(bufmgr *buffer.BufferPoolManager, key []byte, value []byte) error {
-	metaBuffer, err := bufmgr.FetchPage(t.metaPageId)
+	metaBuffer, err := bufmgr.FetchPage(t.MetaPageId)
 	if err != nil {
 		return err
 	}
