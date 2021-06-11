@@ -17,4 +17,7 @@ func main() {
 	//examples.SimpleTablePlan()
 	//examples.SimpleTableRange()
 	//examples.SimpleTableScan()
+	//examples.TableCreate()
+	//examples.TableIndex()
+	//examples.TableLarge()
 }

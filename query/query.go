@@ -74,7 +74,7 @@ func (es *ExecSeqScan) Next(bufmgr *buffer.BufferPoolManager) (Tuple, error) {
 		}
 		return nil, err
 	}
-	pkey := make([][]byte, 0)
+	pkey := [][]byte{}
 	pkey = table.DecodeTuple(pkeyBytes, pkey)
 	if !(es.whileCond)(pkey) {
 		return nil, ErrEndOfIterator
@@ -126,4 +126,113 @@ func (ef *ExecFilter) Next(bufmgr *buffer.BufferPoolManager) (Tuple, error) {
 
 func (ef *ExecFilter) Finish(bufmgr *buffer.BufferPoolManager) {
 	ef.innerIter.Finish(bufmgr)
+}
+
+type IndexScan struct {
+	TableMetaPageId disk.PageId
+	IndexMetaPageId disk.PageId
+	SearchMode      TupleSearchMode
+	WhileCond       func(Tuple) bool
+}
+
+func (s *IndexScan) Start(bufmgr *buffer.BufferPoolManager) (Executor, error) {
+	tableTree := btree.NewBTree(s.TableMetaPageId)
+	indexTree := btree.NewBTree(s.IndexMetaPageId)
+	indexIter, err := indexTree.Search(bufmgr, s.SearchMode.encode())
+	if err != nil {
+		return nil, err
+	}
+	return &ExecIndexScan{
+		tableTree,
+		indexIter,
+		s.WhileCond,
+	}, nil
+}
+
+type ExecIndexScan struct {
+	tableTree *btree.BTree
+	indexIter *btree.BTreeIter
+	whileCond func(Tuple) bool
+}
+
+func (es *ExecIndexScan) Next(bufmgr *buffer.BufferPoolManager) (Tuple, error) {
+	// セカンダリインデックスの検索を進める
+	skeyBytes, pkeyBytes, err := es.indexIter.Next(bufmgr)
+	if err != nil {
+		if err == btree.ErrEndOfIterator {
+			return nil, ErrEndOfIterator
+		}
+		return nil, err
+	}
+	skey := [][]byte{}
+	skey = table.DecodeTuple(skeyBytes, skey)
+	if !(es.whileCond)(skey) {
+		return nil, ErrEndOfIterator
+	}
+
+	// プライマリキーでテーブルを検索
+	tableIter, err := es.tableTree.Search(bufmgr, &btree.SearchModeKey{Key: pkeyBytes})
+	if err != nil {
+		return nil, err
+	}
+	defer tableIter.Finish(bufmgr)
+
+	pkeyBytes, tupleBytes, err := tableIter.Next(bufmgr)
+	if err != nil {
+		return nil, err
+	}
+	tuple := [][]byte{}
+	tuple = table.DecodeTuple(pkeyBytes, tuple)
+	tuple = table.DecodeTuple(tupleBytes, tuple)
+	return tuple, nil
+}
+
+func (es *ExecIndexScan) Finish(bufmgr *buffer.BufferPoolManager) {
+	es.indexIter.Finish(bufmgr)
+}
+
+type IndexOnlyScan struct {
+	IndexMetaPageId disk.PageId
+	SearchMode      TupleSearchMode
+	WhileCond       func(Tuple) bool
+}
+
+func (s *IndexOnlyScan) Start(bufmgr *buffer.BufferPoolManager) (Executor, error) {
+	indexTree := btree.NewBTree(s.IndexMetaPageId)
+	indexIter, err := indexTree.Search(bufmgr, s.SearchMode.encode())
+	if err != nil {
+		return nil, err
+	}
+	return &ExecIndexOnlyScan{
+		indexIter,
+		s.WhileCond,
+	}, nil
+}
+
+type ExecIndexOnlyScan struct {
+	indexIter *btree.BTreeIter
+	whileCond func(Tuple) bool
+}
+
+func (es *ExecIndexOnlyScan) Next(bufmgr *buffer.BufferPoolManager) (Tuple, error) {
+	skeyBytes, pkeyBytes, err := es.indexIter.Next(bufmgr)
+	if err != nil {
+		if err == btree.ErrEndOfIterator {
+			return nil, ErrEndOfIterator
+		}
+		return nil, err
+	}
+	skey := [][]byte{}
+	skey = table.DecodeTuple(skeyBytes, skey)
+	if !(es.whileCond)(skey) {
+		return nil, ErrEndOfIterator
+	}
+
+	tuple := [][]byte{}
+	tuple = table.DecodeTuple(pkeyBytes, tuple)
+	return tuple, nil
+}
+
+func (es *ExecIndexOnlyScan) Finish(bufmgr *buffer.BufferPoolManager) {
+	es.indexIter.Finish(bufmgr)
 }

@@ -88,7 +88,7 @@ func NewBufferPoolManager(diskManager *disk.DiskManager, pool *BufferPool) *Buff
 }
 
 func (m *BufferPoolManager) FetchPage(pageId disk.PageId) (*Buffer, error) {
-	//log.Println("pageId:", pageId)
+	//fmt.Println("pageId:", pageId)
 
 	if bufferId, ok := m.pageTable[pageId]; ok {
 		frame := &m.pool.buffers[bufferId]
