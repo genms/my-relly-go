@@ -1,8 +1,6 @@
 package main
 
-import (
-	"my-relly-go/examples"
-)
+import "my-relly-go/examples"
 
 func main() {
 	examples.BTreeAll()

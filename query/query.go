@@ -14,6 +14,7 @@ var (
 )
 
 type Tuple [][]byte
+type WhileCondFunc func(Tuple) bool
 
 type TupleSearchMode interface {
 	encode() btree.SearchMode
@@ -41,12 +42,13 @@ type Executor interface {
 
 type PlanNode interface {
 	Start(bufmgr *buffer.BufferPoolManager) (Executor, error)
+	Explain() []string
 }
 
 type SeqScan struct {
 	TableMetaPageId disk.PageId
 	SearchMode      TupleSearchMode
-	WhileCond       func(Tuple) bool
+	WhileCond       WhileCondFunc
 }
 
 func (s *SeqScan) Start(bufmgr *buffer.BufferPoolManager) (Executor, error) {
@@ -61,9 +63,13 @@ func (s *SeqScan) Start(bufmgr *buffer.BufferPoolManager) (Executor, error) {
 	}, nil
 }
 
+func (s *SeqScan) Explain() []string {
+	return []string{"SeqScan"}
+}
+
 type ExecSeqScan struct {
 	tableIter *btree.BTreeIter
-	whileCond func(Tuple) bool
+	whileCond WhileCondFunc
 }
 
 func (es *ExecSeqScan) Next(bufmgr *buffer.BufferPoolManager) (Tuple, error) {
@@ -90,7 +96,7 @@ func (es *ExecSeqScan) Finish(bufmgr *buffer.BufferPoolManager) {
 
 type Filter struct {
 	InnerPlan PlanNode
-	Cond      func(Tuple) bool
+	Cond      WhileCondFunc
 }
 
 func (f *Filter) Start(bufmgr *buffer.BufferPoolManager) (Executor, error) {
@@ -104,21 +110,31 @@ func (f *Filter) Start(bufmgr *buffer.BufferPoolManager) (Executor, error) {
 	}, nil
 }
 
+func (f *Filter) Explain() (ret []string) {
+	ret = []string{"Filter"}
+	ret = append(ret, f.InnerPlan.Explain()...)
+	return
+}
+
 type ExecFilter struct {
 	innerIter Executor
-	cond      func(Tuple) bool
+	cond      WhileCondFunc
 }
 
 func (ef *ExecFilter) Next(bufmgr *buffer.BufferPoolManager) (Tuple, error) {
+	//n := 0
 	for {
 		tuple, err := ef.innerIter.Next(bufmgr)
 		if err != nil {
 			if err == btree.ErrEndOfIterator {
 				return nil, ErrEndOfIterator
 			}
+			//log.Println(n)
 			return nil, err
 		}
+		//n++
 		if (ef.cond)(tuple) {
+			//log.Println(n)
 			return tuple, nil
 		}
 	}
@@ -132,7 +148,7 @@ type IndexScan struct {
 	TableMetaPageId disk.PageId
 	IndexMetaPageId disk.PageId
 	SearchMode      TupleSearchMode
-	WhileCond       func(Tuple) bool
+	WhileCond       WhileCondFunc
 }
 
 func (s *IndexScan) Start(bufmgr *buffer.BufferPoolManager) (Executor, error) {
@@ -149,10 +165,14 @@ func (s *IndexScan) Start(bufmgr *buffer.BufferPoolManager) (Executor, error) {
 	}, nil
 }
 
+func (s *IndexScan) Explain() []string {
+	return []string{"IndexScan"}
+}
+
 type ExecIndexScan struct {
 	tableTree *btree.BTree
 	indexIter *btree.BTreeIter
-	whileCond func(Tuple) bool
+	whileCond WhileCondFunc
 }
 
 func (es *ExecIndexScan) Next(bufmgr *buffer.BufferPoolManager) (Tuple, error) {
@@ -194,7 +214,7 @@ func (es *ExecIndexScan) Finish(bufmgr *buffer.BufferPoolManager) {
 type IndexOnlyScan struct {
 	IndexMetaPageId disk.PageId
 	SearchMode      TupleSearchMode
-	WhileCond       func(Tuple) bool
+	WhileCond       WhileCondFunc
 }
 
 func (s *IndexOnlyScan) Start(bufmgr *buffer.BufferPoolManager) (Executor, error) {
@@ -209,9 +229,13 @@ func (s *IndexOnlyScan) Start(bufmgr *buffer.BufferPoolManager) (Executor, error
 	}, nil
 }
 
+func (s *IndexOnlyScan) Explain() []string {
+	return []string{"IndexOnlyScan"}
+}
+
 type ExecIndexOnlyScan struct {
 	indexIter *btree.BTreeIter
-	whileCond func(Tuple) bool
+	whileCond WhileCondFunc
 }
 
 func (es *ExecIndexOnlyScan) Next(bufmgr *buffer.BufferPoolManager) (Tuple, error) {

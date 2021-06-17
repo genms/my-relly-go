@@ -20,6 +20,7 @@ func TestDisk(t *testing.T) {
 				panic(derr)
 			}
 		*/
+		file.Close()
 		if derr := os.Remove(file.Name()); derr != nil {
 			panic(derr)
 		}

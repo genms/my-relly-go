@@ -89,6 +89,42 @@ func NewBTree(metaPageId disk.PageId) *BTree {
 	return &BTree{metaPageId}
 }
 
+func (t *BTree) ReadMetaAppArea(bufmgr *buffer.BufferPoolManager) ([]byte, error) {
+	metaBuffer, err := t.fetchMetaPage(bufmgr)
+	if err != nil {
+		return nil, err
+	}
+	defer bufmgr.FinishUsingPage(metaBuffer)
+
+	meta := NewMeta(metaBuffer.Page[:])
+	data := make([]byte, len(meta.appArea))
+	copy(data, meta.appArea)
+	return data, nil
+}
+
+func (t *BTree) WriteMetaAppArea(bufmgr *buffer.BufferPoolManager, data []byte) error {
+	metaBuffer, err := t.fetchMetaPage(bufmgr)
+	if err != nil {
+		return err
+	}
+	defer bufmgr.FinishUsingPage(metaBuffer)
+
+	meta := NewMeta(metaBuffer.Page[:])
+	if len(meta.appArea) < len(data) {
+		return ErrTooLongData
+	}
+	copy(meta.appArea, data)
+	return nil
+}
+
+func (t *BTree) fetchMetaPage(bufmgr *buffer.BufferPoolManager) (*buffer.Buffer, error) {
+	metaBuffer, err := bufmgr.FetchPage(t.MetaPageId)
+	if err != nil {
+		return nil, err
+	}
+	return metaBuffer, nil
+}
+
 func (t *BTree) fetchRootPage(bufmgr *buffer.BufferPoolManager) (*buffer.Buffer, error) {
 	metaBuffer, err := bufmgr.FetchPage(t.MetaPageId)
 	if err != nil {

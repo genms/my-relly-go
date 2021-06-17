@@ -1,9 +1,8 @@
 package btree
 
 import (
-	"unsafe"
-
 	"my-relly-go/disk"
+	"unsafe"
 )
 
 type MetaHeader struct {
@@ -12,7 +11,7 @@ type MetaHeader struct {
 
 type Meta struct {
 	header  *MetaHeader
-	_unused []byte
+	appArea []byte
 }
 
 func NewMeta(bytes []byte) *Meta {
@@ -23,6 +22,6 @@ func NewMeta(bytes []byte) *Meta {
 	}
 
 	meta.header = (*MetaHeader)(unsafe.Pointer(&bytes[0]))
-	meta._unused = bytes[headerSize:]
+	meta.appArea = bytes[headerSize:]
 	return &meta
 }
