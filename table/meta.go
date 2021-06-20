@@ -1,59 +1,72 @@
 package table
 
-import "math"
+import (
+	"strconv"
+	"strings"
 
-const (
-	META_VERSION_UNIQUE_INDICES VersionType = 1
-	META_CURRENT_VERSION        VersionType = 1
-	INVALID_SKEY                KeyElemType = math.MaxUint16
+	"google.golang.org/protobuf/proto"
 )
 
-type VersionType uint16
-type NumColsType uint16
-type NumKeyElemsType uint16
-type KeyElemType uint16
+const (
+	META_VERSION_UNIQUE_INDICES = 1
+	META_CURRENT_VERSION        = 1
+	//INVALID_SKEY                = math.MaxUint16
+)
 
+/*
 type Meta struct {
-	Version       VersionType
-	NumCols       NumColsType
-	NumKeyElems   NumKeyElemsType
-	_             uint16
-	UniqueIndices [16][16]KeyElemType
+	Version       int
+	NumCols       int
+	NumKeyElems   int
+	ColNames      []string
+	UniqueIndices []string
 }
+*/
 
 func NewMeta() *Meta {
 	meta := &Meta{
 		Version: META_CURRENT_VERSION,
 	}
-	for i := 0; i < 16; i++ {
-		for j := 0; j < 16; j++ {
-			meta.UniqueIndices[i][j] = INVALID_SKEY
+	return meta
+}
+
+func (m *Meta) AddUniqueIndices(indices []int) {
+	str := ""
+	for _, col := range indices {
+		str += strconv.Itoa(col) + ","
+	}
+	str = strings.Trim(str, ",")
+	m.UniqueIndicesStr = append(m.UniqueIndicesStr, str)
+}
+
+func (m *Meta) GetUniqueIndices() [][]int {
+	indices := [][]int{}
+	for i, str := range m.UniqueIndicesStr {
+		splited := strings.Split(str, ",")
+		indices = append(indices, []int{})
+		for _, colStr := range splited {
+			col, err := strconv.Atoi(colStr)
+			if err != nil {
+				panic(err)
+			}
+			indices[i] = append(indices[i], col)
 		}
+	}
+	return indices
+}
+
+func NewMetaFromBytes(buf []byte) *Meta {
+	meta := &Meta{}
+	if err := proto.Unmarshal(buf, meta); err != nil {
+		panic(err)
 	}
 	return meta
 }
 
-func (m *Meta) SetUniqueIndices(indexNo int, ui []KeyElemType) {
-	for i := 0; i < 16; i++ {
-		if i < len(ui) {
-			m.UniqueIndices[indexNo][i] = KeyElemType(ui[i])
-		} else {
-			m.UniqueIndices[indexNo][i] = INVALID_SKEY
-		}
+func (m *Meta) ToBytes() []byte {
+	buf, err := proto.Marshal(m)
+	if err != nil {
+		panic(err)
 	}
-}
-
-func (m *Meta) GetUniqueIndices() [][]KeyElemType {
-	ui := make([][]KeyElemType, 0, 16)
-	for i := 0; i < 16; i++ {
-		for j := 0; j < 16; j++ {
-			if m.UniqueIndices[i][j] != INVALID_SKEY {
-				if i >= len(ui) {
-					ui = append(ui, []KeyElemType{})
-				}
-				ui[i] = append(ui[i], KeyElemType(m.UniqueIndices[i][j]))
-			}
-		}
-	}
-	return ui
+	return buf
 }

@@ -1,8 +1,6 @@
 package table
 
 import (
-	"bytes"
-	"encoding/binary"
 	"my-relly-go/btree"
 	"my-relly-go/buffer"
 	"my-relly-go/disk"
@@ -34,8 +32,9 @@ func (t *SimpleTable) Insert(bufmgr *buffer.BufferPoolManager, record [][]byte) 
 
 type Table struct {
 	MetaPageId    disk.PageId
-	NumCols       NumColsType
-	NumKeyElems   NumKeyElemsType
+	NumCols       int
+	NumKeyElems   int
+	ColNames      []string
 	UniqueIndices []UniqueIndex
 }
 
@@ -47,16 +46,16 @@ func (t *Table) Create(bufmgr *buffer.BufferPoolManager) error {
 	t.MetaPageId = tree.MetaPageId
 
 	meta := NewMeta()
-	meta.NumCols = t.NumCols
-	meta.NumKeyElems = t.NumKeyElems
+	meta.NumCols = int32(t.NumCols)
+	meta.NumKeyElems = int32(t.NumKeyElems)
+	meta.ColNames = t.ColNames
 	for i := range t.UniqueIndices {
 		t.UniqueIndices[i].Create(bufmgr)
-		meta.SetUniqueIndices(i, t.UniqueIndices[i].SKey)
+		meta.AddUniqueIndices(t.UniqueIndices[i].SKey)
 	}
 
-	buf := new(bytes.Buffer)
-	binary.Write(buf, binary.LittleEndian, meta)
-	err = tree.WriteMetaAppArea(bufmgr, buf.Bytes())
+	buf := meta.ToBytes()
+	err = tree.WriteMetaAppArea(bufmgr, buf)
 	if err != nil {
 		return err
 	}
@@ -81,7 +80,7 @@ func (t *Table) Insert(bufmgr *buffer.BufferPoolManager, record [][]byte) error 
 
 type UniqueIndex struct {
 	MetaPageId disk.PageId
-	SKey       []KeyElemType
+	SKey       []int
 }
 
 func (idx *UniqueIndex) Create(bufmgr *buffer.BufferPoolManager) error {

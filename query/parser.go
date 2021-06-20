@@ -2,14 +2,15 @@ package query
 
 import (
 	"bytes"
-	"encoding/binary"
 	"encoding/json"
 	"my-relly-go/btree"
 	"my-relly-go/buffer"
 	"my-relly-go/disk"
 	"my-relly-go/table"
+	"regexp"
 	"strconv"
 
+	"github.com/thoas/go-funk"
 	"golang.org/x/xerrors"
 )
 
@@ -43,9 +44,7 @@ func NewParser(bufmgr *buffer.BufferPoolManager) (*Parser, error) {
 	if err != nil {
 		return nil, err
 	}
-	reader := bytes.NewReader(buf)
-	meta := &table.Meta{}
-	binary.Read(reader, binary.LittleEndian, meta)
+	meta := table.NewMetaFromBytes(buf)
 	return &Parser{meta: meta}, nil
 }
 
@@ -60,6 +59,7 @@ func (p *Parser) Parse(query string) (PlanNode, error) {
 	if !ok {
 		return nil, ErrInvalidCondition
 	}
+	where = p.revertColName(where)
 
 	// Scanノードを構築
 	scan, where, err := p.buildScanNode(query, where)
@@ -76,6 +76,19 @@ func (p *Parser) Parse(query string) (PlanNode, error) {
 
 	// 一番手前のノードを返す
 	return nodes[len(nodes)-1], nil
+}
+
+func (p *Parser) revertColName(where map[string]interface{}) map[string]interface{} {
+	for colStr, cond := range where {
+		r := regexp.MustCompile(`^\d+$`)
+		if !r.MatchString(colStr) {
+			if col := funk.IndexOf(p.meta.ColNames, colStr); col >= 0 {
+				delete(where, colStr)
+				where[strconv.Itoa(col)] = cond
+			}
+		}
+	}
+	return where
 }
 
 func (p *Parser) buildScanNode(query string, where map[string]interface{}) (PlanNode, map[string]interface{}, error) {
@@ -169,9 +182,9 @@ func (p *Parser) buildCompositePKeyScanNode(query string, where map[string]inter
 
 	// プライマリキーの対象カラムすべてで完全一致検索がされているか
 	numKeyElems := int(p.meta.NumKeyElems)
-	index := make([]table.KeyElemType, numKeyElems)
+	index := make([]int, numKeyElems)
 	for pkey := 0; pkey < numKeyElems; pkey++ {
-		index[pkey] = table.KeyElemType(pkey)
+		index[pkey] = pkey
 	}
 	tupleSearchMode, whileCond, err := p.makeCondWithCompositeKey(index, where)
 	if err != nil {
@@ -193,7 +206,7 @@ func (p *Parser) buildCompositePKeyScanNode(query string, where map[string]inter
 	return scan, where, nil
 }
 
-func (p *Parser) buildSingleSKeyScanNode(query string, where map[string]interface{}, indexNo int, uniqueIndex []table.KeyElemType) (PlanNode, map[string]interface{}, error) {
+func (p *Parser) buildSingleSKeyScanNode(query string, where map[string]interface{}, indexNo int, uniqueIndex []int) (PlanNode, map[string]interface{}, error) {
 	var scan PlanNode = nil
 
 	// セカンダリキーの検索条件が指定されているか
@@ -236,7 +249,7 @@ func (p *Parser) buildSingleSKeyScanNode(query string, where map[string]interfac
 	return scan, where, nil
 }
 
-func (p *Parser) buildCompositeSKeyScanNode(query string, where map[string]interface{}, indexNo int, uniqueIndex []table.KeyElemType) (PlanNode, map[string]interface{}, error) {
+func (p *Parser) buildCompositeSKeyScanNode(query string, where map[string]interface{}, indexNo int, uniqueIndex []int) (PlanNode, map[string]interface{}, error) {
 	var scan PlanNode = nil
 
 	// セカンダリキーの対象カラムすべてで完全一致検索がされているか
@@ -390,7 +403,7 @@ func (p *Parser) makeRangeCondWithSingleKey(exprs map[string]interface{}) (Tuple
 	return tupleSearchMode, whileCond, nil
 }
 
-func (p *Parser) makeCondWithCompositeKey(index []table.KeyElemType, where map[string]interface{}) (TupleSearchMode, WhileCondFunc, error) {
+func (p *Parser) makeCondWithCompositeKey(index []int, where map[string]interface{}) (TupleSearchMode, WhileCondFunc, error) {
 	searchKeys := [][]byte{}
 	whileCondFuncs := []WhileCondFunc{}
 

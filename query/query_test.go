@@ -50,19 +50,27 @@ func createTestTable() {
 		pool := buffer.NewBufferPool(100)
 		bufmgr := buffer.NewBufferPoolManager(diskManager, pool)
 
-		// id1, id2, email, name, grade, class, student_no
 		tbl := table.Table{
 			MetaPageId:  disk.INVALID_PAGE_ID,
 			NumCols:     7,
-			NumKeyElems: table.NumKeyElemsType(numKeyElems),
+			NumKeyElems: numKeyElems,
+			ColNames: []string{
+				"id1",
+				"id2",
+				"email",
+				"name",
+				"grade",
+				"class",
+				"student_no",
+			},
 			UniqueIndices: []table.UniqueIndex{
 				{
 					MetaPageId: disk.INVALID_PAGE_ID,
-					SKey:       []table.KeyElemType{2},
+					SKey:       []int{2}, // email
 				},
 				{
 					MetaPageId: disk.INVALID_PAGE_ID,
-					SKey:       []table.KeyElemType{4, 5, 6},
+					SKey:       []int{4, 5, 6}, // grade, class, student_no
 				},
 			},
 		}

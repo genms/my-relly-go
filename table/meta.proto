@@ -1,0 +1,11 @@
+syntax = "proto3";
+package table;
+option go_package = "./;table";
+
+message Meta {
+    int32 Version = 1;
+    int32 NumCols = 2;
+    int32 NumKeyElems = 3;
+    repeated string ColNames = 4;
+    repeated string UniqueIndicesStr = 5;
+}

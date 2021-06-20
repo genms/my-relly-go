@@ -10,8 +10,9 @@ type MetaHeader struct {
 }
 
 type Meta struct {
-	header  *MetaHeader
-	appArea []byte
+	header        *MetaHeader
+	appAreaLength *uint64
+	appArea       []byte
 }
 
 func NewMeta(bytes []byte) *Meta {
@@ -22,6 +23,7 @@ func NewMeta(bytes []byte) *Meta {
 	}
 
 	meta.header = (*MetaHeader)(unsafe.Pointer(&bytes[0]))
-	meta.appArea = bytes[headerSize:]
+	meta.appAreaLength = (*uint64)(unsafe.Pointer(&bytes[headerSize]))
+	meta.appArea = bytes[headerSize+8:]
 	return &meta
 }

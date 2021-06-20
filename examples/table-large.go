@@ -38,7 +38,7 @@ func TableLarge() {
 		UniqueIndices: []table.UniqueIndex{
 			{
 				MetaPageId: disk.INVALID_PAGE_ID,
-				SKey:       []table.KeyElemType{2},
+				SKey:       []int{2},
 			},
 		},
 	}

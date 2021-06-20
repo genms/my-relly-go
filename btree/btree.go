@@ -97,7 +97,7 @@ func (t *BTree) ReadMetaAppArea(bufmgr *buffer.BufferPoolManager) ([]byte, error
 	defer bufmgr.FinishUsingPage(metaBuffer)
 
 	meta := NewMeta(metaBuffer.Page[:])
-	data := make([]byte, len(meta.appArea))
+	data := make([]byte, *(meta.appAreaLength))
 	copy(data, meta.appArea)
 	return data, nil
 }
@@ -114,6 +114,7 @@ func (t *BTree) WriteMetaAppArea(bufmgr *buffer.BufferPoolManager, data []byte) 
 		return ErrTooLongData
 	}
 	copy(meta.appArea, data)
+	*(meta.appAreaLength) = uint64(len(data))
 	return nil
 }
 
