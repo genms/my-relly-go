@@ -28,9 +28,9 @@ func (o Op) valid() bool {
 }
 
 var (
-	ErrJsonParse        = xerrors.New("json parse error")
-	ErrInvalidCondition = xerrors.New("invalid condition")
-	errCannotMakeConds  = xerrors.New("cannot make conds")
+	ErrJsonParse        = xerrors.New("JSON parse error")
+	ErrInvalidCondition = xerrors.New("Invalid condition")
+	errCannotMakeConds  = xerrors.New("Cannot make conds")
 )
 
 type Parser struct {
@@ -82,6 +82,7 @@ func (p *Parser) buildScanNode(query string, where map[string]interface{}) (Plan
 	var scan PlanNode = nil
 	var err error
 
+	// プライマリキーに対する検索条件をもとにScanノードを構築
 	if p.meta.NumKeyElems == 1 {
 		// プライマリキーが単一キーの場合
 		scan, where, err = p.buildSinglePKeyScanNode(query, where)
@@ -96,6 +97,7 @@ func (p *Parser) buildScanNode(query string, where map[string]interface{}) (Plan
 		return scan, where, nil
 	}
 
+	// セカンダリキーに対する検索条件をもとにScanノードを構築
 	uniqueIndices := p.meta.GetUniqueIndices()
 	for indexNo, uniqueIndex := range uniqueIndices {
 		if len(uniqueIndex) == 1 {
@@ -113,7 +115,7 @@ func (p *Parser) buildScanNode(query string, where map[string]interface{}) (Plan
 		}
 	}
 
-	// ここまでScanが決まらなかったら、先頭からSeqScanを使う
+	// ここまでScanノードが決まらなかったら、先頭からのSeqScanを使う
 	scan = &SeqScan{
 		TableMetaPageId: disk.PageId(0),
 		SearchMode:      &TupleSearchModeStart{},

@@ -5,12 +5,26 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch Package",
+            "name": "Server",
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            //"program": "${fileDirname}"
-            "program": "${workspaceRoot}/main.go"
+            "program": "${workspaceRoot}/server",
+            "args": ["${workspaceRoot}/db.rly"],
+        },
+        {
+            "name": "Examples",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceRoot}/examples"
+        },
+        {
+            "name": "Current program",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${fileDirname}"
         },
         /*
         {
